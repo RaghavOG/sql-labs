@@ -5,11 +5,16 @@ import Editor from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { categories, getLessonById, getLessonsByCategory } from '@/lib/lessons';
 import Logo from '@/components/Logo';
+import Confetti from 'react-confetti';
+import { useWindowSize } from 'react-use';
 
 interface QueryResult {
   rows?: Record<string, unknown>[];
   error?: string;
   message?: string;
+  isCorrect?: boolean;
+  expectedRowCount?: number;
+  actualRowCount?: number;
 }
 
 interface TableInfo {
@@ -27,7 +32,10 @@ export default function Home() {
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [tableInfo, setTableInfo] = useState<TableInfo[]>([]);
   const [editorError, setEditorError] = useState<string | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const { width, height } = useWindowSize();
 
   const currentLesson = getLessonById(currentLessonId);
 
@@ -87,6 +95,8 @@ export default function Home() {
       setQuery('');
       setResult(null);
       setShowHint(false);
+      setShowExplanation(false);
+      setShowConfetti(false);
     }
   }, [currentLessonId, currentLesson]);
 
@@ -117,11 +127,34 @@ export default function Home() {
       });
 
       const data = await response.json();
-      setResult(data);
+      
+      // Check if query is correct
+      const isCorrect = checkQueryCorrectness(data, queryToRun, currentLesson);
+      
+      // Add validation info to result
+      const enhancedResult = {
+        ...data,
+        isCorrect,
+        expectedRowCount: currentLesson.expectedRowCount,
+        actualRowCount: data.rows?.length || 0,
+      };
+      
+      setResult(enhancedResult);
 
-      // Mark as completed if successful
-      if (!data.error && data.rows) {
+      // Mark as completed if correct
+      if (isCorrect) {
         markAsCompleted(currentLessonId);
+        
+        // Show full-screen confetti and modal on every successful submission
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 1500);
+        
+        // Show explanation
+        if (currentLesson.explanation) {
+          setShowExplanation(true);
+        }
+      } else {
+        setShowExplanation(false);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to execute query';
@@ -131,10 +164,77 @@ export default function Home() {
     }
   };
 
+  // Check if query matches solution or expected row count
+  const checkQueryCorrectness = (result: QueryResult, userQuery: string, lesson: typeof currentLesson): boolean => {
+    if (!lesson || result.error) return false;
+    
+    // Normalize queries for comparison (remove whitespace, convert to uppercase)
+    const normalizeQuery = (q: string) => q.trim().replace(/\s+/g, ' ').toUpperCase();
+    const normalizedUserQuery = normalizeQuery(userQuery);
+    const normalizedSolution = normalizeQuery(lesson.solution);
+    
+    // Check if query matches solution
+    if (normalizedUserQuery === normalizedSolution) {
+      return true;
+    }
+    
+    // Check expected row count if available
+    if (lesson.expectedRowCount !== undefined && result.rows) {
+      return result.rows.length === lesson.expectedRowCount;
+    }
+    
+    // If no specific validation, consider it correct if no error
+    return !result.error && result.rows !== undefined;
+  };
+
   if (!currentLesson) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-[#1e1e1e] text-gray-100">
+    <div className="flex flex-col h-screen bg-[#1e1e1e] text-gray-100 relative overflow-hidden">
+      {showConfetti && (
+        <>
+          <Confetti
+            width={width || window.innerWidth}
+            height={height || window.innerHeight}
+            recycle={false}
+            numberOfPieces={120}
+            gravity={0.9}
+            initialVelocityY={25}
+            initialVelocityX={8}
+            tweenDuration={300}
+            confettiSource={{
+              x: width ? width / 2 : window.innerWidth / 2,
+              y: height ? height / 2 : window.innerHeight / 2,
+              w: 0,
+              h: 0,
+            }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 40,
+              pointerEvents: 'none',
+            }}
+          />
+          {/* Celebration Modal */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <div className="bg-[#252526] border-2 border-orange-500 rounded-lg p-8 shadow-2xl pointer-events-auto animate-fade-in animate-scale-in">
+              <div className="text-center">
+                <div className="text-6xl mb-4 animate-bounce">🎉</div>
+                <h2 className="text-2xl font-bold text-white mb-2">Excellent!</h2>
+                <p className="text-orange-400 font-semibold">Query executed successfully!</p>
+                {currentLesson && (
+                  <p className="text-sm text-gray-400 mt-3">
+                    {currentLesson.title} completed
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Lessons */}
@@ -473,6 +573,65 @@ export default function Home() {
         </div>
                     </div>
                   </div>
+                ) : result?.isCorrect ? (
+                  <div className="space-y-3">
+                    <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-green-400 text-lg">✓</span>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-green-400 mb-2">Correct! 🎉</h4>
+                          {currentLesson.explanation && showExplanation && (
+                            <p className="text-xs text-green-200 leading-relaxed mb-2">
+                              {currentLesson.explanation}
+                            </p>
+                          )}
+                          {result.rows && (
+                            <p className="text-xs text-green-300">
+                              {result.rows.length} row(s) returned
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {result.rows && result.rows.length > 0 && (
+                      <div className="border border-[#3e3e42] rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-xs">
+                            <thead className="bg-[#252526]">
+                              <tr>
+                                {Object.keys(result.rows[0] || {}).map(key => (
+                                  <th
+                                    key={key}
+                                    className="px-4 py-2 text-left font-medium text-orange-400 uppercase tracking-wider border-b border-[#3e3e42]"
+                                  >
+                                    {key}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="bg-[#1e1e1e]">
+                              {result.rows.map((row, idx) => (
+                                <tr
+                                  key={idx}
+                                  className="border-b border-[#3e3e42] last:border-0 hover:bg-[#252526] transition-colors"
+                                >
+                                  {Object.values(row).map((value: unknown, cellIdx) => (
+                                    <td key={cellIdx} className="px-4 py-2 text-gray-300">
+                                      {value === null || value === undefined ? (
+                                        <span className="text-gray-600 italic">NULL</span>
+                                      ) : (
+                                        String(value)
+                                      )}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : result?.message ? (
                   <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
                     <p className="text-xs text-green-300">✓ {result.message}</p>
@@ -483,6 +642,14 @@ export default function Home() {
                       <p className="text-xs text-gray-500">No rows returned.</p>
                     ) : (
                       <>
+                        {/* Show expected vs actual if wrong */}
+                        {result.expectedRowCount !== undefined && result.actualRowCount !== undefined && result.actualRowCount !== result.expectedRowCount && (
+                          <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3 mb-3">
+                            <p className="text-xs text-yellow-300 font-medium">
+                              Expected {result.expectedRowCount} row(s), got {result.actualRowCount} row(s)
+                            </p>
+                          </div>
+                        )}
                         <p className="text-xs text-gray-500 mb-3">
                           {result.rows.length} row(s) returned
                           {result.rows.length === 100 && ' (limited to 100 rows)'}

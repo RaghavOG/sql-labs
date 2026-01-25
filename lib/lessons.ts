@@ -7,6 +7,8 @@ export interface Lesson {
   task: string;
   solution: string;
   expectedColumns?: string[];
+  expectedRowCount?: number;
+  explanation?: string;
   schema: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
 }
@@ -114,6 +116,8 @@ export const lessons: Lesson[] = [
     task: 'Retrieve only the name and email columns from the users table.',
     solution: 'SELECT name, email FROM users',
     expectedColumns: ['name', 'email'],
+    expectedRowCount: 10,
+    explanation: 'SELECT chooses which columns appear in your result. You can list specific columns instead of using * to get only what you need.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -212,6 +216,8 @@ export const lessons: Lesson[] = [
     hint: 'WHERE filters rows. Syntax: SELECT * FROM table WHERE condition',
     task: 'Find all users from the USA.',
     solution: "SELECT * FROM users WHERE country = 'USA'",
+    expectedRowCount: 3,
+    explanation: 'WHERE filters rows before SELECT chooses columns. Think of WHERE as a bouncer - only rows meeting the condition get through.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
