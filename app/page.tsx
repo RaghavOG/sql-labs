@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Editor from '@monaco-editor/react';
+import type { editor } from 'monaco-editor';
 import { categories, getLessonById, getLessonsByCategory } from '@/lib/lessons';
 
 interface QueryResult {
@@ -20,12 +22,22 @@ export default function Home() {
   const [result, setResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [showSolution, setShowSolution] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [tableInfo, setTableInfo] = useState<TableInfo[]>([]);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
   const currentLesson = getLessonById(currentLessonId);
+
+  // Detect Brave browser
+  useEffect(() => {
+    const nav = navigator as Navigator & { brave?: { isBrave: () => boolean } };
+    const isBrave = nav.brave?.isBrave() || false;
+    if (isBrave) {
+      console.log('Brave browser detected - using compatibility mode');
+    }
+  }, []);
 
   // Load completed lessons from localStorage
   useEffect(() => {
@@ -43,7 +55,7 @@ export default function Home() {
     localStorage.setItem('completedLessons', JSON.stringify(Array.from(updated)));
   };
 
-  // Extract table info from schema
+  // Extract table info from schema and reset state when lesson changes
   useEffect(() => {
     if (currentLesson) {
       const tables: TableInfo[] = [];
@@ -74,7 +86,6 @@ export default function Home() {
       setQuery('');
       setResult(null);
       setShowHint(false);
-      setShowSolution(false);
     }
   }, [currentLessonId, currentLesson]);
 
@@ -111,302 +122,441 @@ export default function Home() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleRunQuery();
-    }
-    // Tab support
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const target = e.target as HTMLTextAreaElement;
-      const start = target.selectionStart;
-      const end = target.selectionEnd;
-      setQuery(query.substring(0, start) + '  ' + query.substring(end));
-      setTimeout(() => {
-        target.selectionStart = target.selectionEnd = start + 2;
-      }, 0);
-    }
-  };
-
   if (!currentLesson) return null;
 
   return (
-    <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
-      {/* Sidebar */}
-      <aside
-        className={`${
-          sidebarOpen ? 'w-80' : 'w-0'
-        } transition-all duration-300 bg-gray-800 border-r border-gray-700 overflow-y-auto flex-shrink-0`}
-      >
-        {sidebarOpen && (
-          <div className="p-6">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-orange-400 flex items-center gap-2">
-                <span className="text-3xl">🍵</span>
-                <span>Chai <span className="text-yellow-400">SQL</span>ab</span>
-              </h1>
-              <p className="text-sm text-gray-400 mt-1">Learn SQL Interactively</p>
-            </div>
-
-            <div className="space-y-6">
-              {categories.map(category => {
-                const categoryLessons = getLessonsByCategory(category.id);
-                const completedCount = categoryLessons.filter(l => 
-                  completedLessons.has(l.id)
-                ).length;
-
-                return (
-                  <div key={category.id}>
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xs uppercase tracking-wider text-gray-400 font-semibold flex items-center gap-2">
-                        <span>{category.icon}</span>
-                        <span>{category.title}</span>
-                      </h3>
-                      <span className="text-xs text-gray-500">
-                        {completedCount}/{categoryLessons.length}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      {categoryLessons.map(lesson => (
-                        <button
-                          key={lesson.id}
-                          onClick={() => setCurrentLessonId(lesson.id)}
-                          className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                            currentLessonId === lesson.id
-                              ? 'bg-orange-500 text-white'
-                              : 'text-gray-300 hover:bg-gray-700'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span>{lesson.title}</span>
-                            {completedLessons.has(lesson.id) && (
-                              <span className="text-green-400">✓</span>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </aside>
-
-      {/* Toggle Sidebar Button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute top-4 left-4 z-10 p-2 bg-gray-800 border border-gray-700 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
-      >
-        {sidebarOpen ? '◀' : '▶'}
-      </button>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-gray-800 border-b border-gray-700 px-8 py-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-3xl font-bold text-white">{currentLesson.title}</h2>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  currentLesson.difficulty === 'beginner' ? 'bg-green-900 text-green-300' :
-                  currentLesson.difficulty === 'intermediate' ? 'bg-yellow-900 text-yellow-300' :
-                  'bg-red-900 text-red-300'
-                }`}>
-                  {currentLesson.difficulty}
-                </span>
+    <div className="flex flex-col h-screen bg-[#1e1e1e] text-gray-100">
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Lessons */}
+        <aside
+          className={`${
+            sidebarOpen ? 'w-64' : 'w-0'
+          } transition-all duration-300 bg-[#252526] border-r border-[#3e3e42] overflow-hidden flex-shrink-0`}
+        >
+          {sidebarOpen && (
+            <div className="h-full overflow-y-auto">
+              <div className="p-4 border-b border-[#3e3e42]">
+                <h1 className="text-xl font-bold text-white">
+                  SQL <span className="text-orange-500">Labs</span>
+          </h1>
+                <p className="text-xs text-gray-400 mt-1">Interactive Learning</p>
               </div>
-              <p className="text-gray-400">{currentLesson.description}</p>
-            </div>
-          </div>
 
-          <div className="mt-4 p-4 bg-gray-900 border border-gray-700 rounded-md">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">🎯</span>
-              <div className="flex-1">
-                <h3 className="font-semibold text-orange-400 mb-1">Task:</h3>
-                <p className="text-gray-300">{currentLesson.task}</p>
-              </div>
-            </div>
-          </div>
+              <div className="p-3 space-y-4">
+                {categories.map(category => {
+                  const categoryLessons = getLessonsByCategory(category.id);
+                  const completedCount = categoryLessons.filter(l => 
+                    completedLessons.has(l.id)
+                  ).length;
 
-          <div className="mt-3 flex gap-2">
-            <button
-              onClick={() => setShowHint(!showHint)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
-            >
-              {showHint ? 'Hide Hint' : 'Show Hint'}
-            </button>
-            <button
-              onClick={() => setShowSolution(!showSolution)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 transition-colors"
-            >
-              {showSolution ? 'Hide Solution' : 'Show Solution'}
-            </button>
-          </div>
-
-          {showHint && currentLesson.hint && (
-            <div className="mt-3 p-3 bg-blue-900/30 border border-blue-700 rounded-md">
-              <p className="text-sm text-blue-200">💡 <strong>Hint:</strong> {currentLesson.hint}</p>
-            </div>
-          )}
-
-          {showSolution && (
-            <div className="mt-3 p-3 bg-purple-900/30 border border-purple-700 rounded-md">
-              <p className="text-sm text-purple-200 font-mono">
-                <strong>Solution:</strong> {currentLesson.solution}
-              </p>
-            </div>
-          )}
-        </header>
-
-        {/* Content Area */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Editor & Results */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* SQL Editor */}
-            <div className="bg-gray-800 border-b border-gray-700 p-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-300">SQL Query Editor</label>
-                <button
-                  onClick={handleRunQuery}
-                  disabled={loading}
-                  className="px-6 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  {loading ? 'Running...' : 'Run Query'} <span className="text-xs ml-1">(Ctrl+Enter)</span>
-                </button>
-              </div>
-              <textarea
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full h-32 px-4 py-3 bg-gray-900 border border-gray-700 rounded-md font-mono text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
-                placeholder="-- Write your SQL query here"
-              />
-            </div>
-
-            {/* Results */}
-            <div className="flex-1 bg-gray-900 p-6 overflow-auto">
-              <h3 className="text-lg font-semibold text-orange-400 mb-4">Query Results</h3>
-              
-              {result?.error ? (
-                <div className="bg-red-900/20 border border-red-700 rounded-md p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-red-400 text-xl">⚠️</span>
-                    <div>
-                      <h4 className="text-sm font-medium text-red-300 mb-1">Error</h4>
-                      <p className="text-sm text-red-200">{result.error}</p>
-                    </div>
-                  </div>
-                </div>
-              ) : result?.message ? (
-                <div className="bg-green-900/20 border border-green-700 rounded-md p-4">
-                  <p className="text-sm text-green-200">✅ {result.message}</p>
-                </div>
-              ) : result?.rows ? (
-                <div>
-                  {result.rows.length === 0 ? (
-                    <p className="text-gray-400 text-sm">No rows returned.</p>
-                  ) : (
-                    <>
-                      <p className="text-sm text-gray-400 mb-3">
-                        {result.rows.length} row(s) returned
-                        {result.rows.length === 100 && ' (limited to 100 rows)'}
-                      </p>
-                      <div className="border border-gray-700 rounded-lg overflow-hidden">
-                        <table className="min-w-full">
-                          <thead className="bg-gray-800">
-                            <tr>
-                              {Object.keys(result.rows[0] || {}).map((key) => (
-                                <th
-                                  key={key}
-                                  className="px-4 py-3 text-left text-xs font-medium text-orange-400 uppercase tracking-wider border-b border-gray-700"
-                                >
-                                  {key}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="bg-gray-900 divide-y divide-gray-800">
-                            {result.rows.map((row, idx) => (
-                              <tr key={idx} className="hover:bg-gray-800 transition-colors">
-                                {Object.values(row).map((value: unknown, cellIdx) => (
-                                  <td
-                                    key={cellIdx}
-                                    className="px-4 py-3 whitespace-nowrap text-sm text-gray-300"
-                                  >
-                                    {value === null || value === undefined ? (
-                                      <span className="text-gray-500 italic">NULL</span>
-                                    ) : (
-                                      String(value)
-                                    )}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                  return (
+                    <div key={category.id}>
+                      <div className="flex items-center justify-between mb-2 px-2">
+                        <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">
+                          {category.title}
+                        </h3>
+                        <span className="text-[10px] text-gray-600">
+                          {completedCount}/{categoryLessons.length}
+                        </span>
                       </div>
-                    </>
+                      <div className="space-y-0.5">
+                        {categoryLessons.map(lesson => (
+                          <button
+                            key={lesson.id}
+                            onClick={() => setCurrentLessonId(lesson.id)}
+                            className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
+                              currentLessonId === lesson.id
+                                ? 'bg-[#37373d] text-white'
+                                : 'text-gray-400 hover:bg-[#2a2d2e] hover:text-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="truncate">{lesson.title}</span>
+                              {completedLessons.has(lesson.id) && (
+                                <span className="text-green-500 ml-1">✓</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </aside>
+
+        {/* Toggle Sidebar Button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className={`fixed top-3 z-20 p-1.5 bg-[#252526] border border-[#3e3e42] rounded text-gray-400 hover:text-white hover:bg-[#2a2d2e] transition-all text-xs ${
+            sidebarOpen ? 'left-[252px]' : 'left-3'
+          }`}
+        >
+          {sidebarOpen ? '◀' : '▶'}
+        </button>
+
+        {/* Center Panel - Problem Statement */}
+        <main className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Problem Statement */}
+            <div className="flex-1 overflow-y-auto bg-[#1e1e1e] p-6 border-r border-[#3e3e42]">
+              <div className="max-w-3xl mx-auto">
+                {/* Title and Difficulty */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h2 className="text-2xl font-semibold text-white">
+                      {currentLesson.title}
+                    </h2>
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        currentLesson.difficulty === 'beginner'
+                          ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                          : currentLesson.difficulty === 'intermediate'
+                          ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}
+                    >
+                      {currentLesson.difficulty}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-400">{currentLesson.description}</p>
+                </div>
+
+                {/* Task Section */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
+                    Task
+                  </h3>
+                  <div className="bg-[#252526] border border-[#3e3e42] rounded-lg p-4">
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      {currentLesson.task}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Hint Toggle */}
+                <div className="mb-6">
+                  <button
+                    onClick={() => setShowHint(!showHint)}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    {showHint ? '▼ Hide Hint' : '▶ Show Hint'}
+                  </button>
+                  {showHint && currentLesson.hint && (
+                    <div className="mt-3 bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                      <p className="text-xs text-blue-300 leading-relaxed">
+                        💡 {currentLesson.hint}
+                      </p>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <p className="text-gray-500 text-sm">
-                  Run a query to see results here.
-                </p>
-              )}
-            </div>
-          </div>
 
-          {/* Database Schema Panel */}
-          <aside className="w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto flex-shrink-0">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-orange-400 mb-4">Database Schema</h3>
-              <p className="text-xs text-gray-400 mb-4">Explore the tables and their structure</p>
-
-              <div className="space-y-4">
-                {tableInfo.map(table => (
-                  <div key={table.name} className="bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
-                    <div className="bg-gray-800 px-4 py-2 border-b border-gray-700">
-                      <h4 className="font-mono text-sm font-semibold text-yellow-400">{table.name}</h4>
-                    </div>
-                    <div className="p-3">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-gray-400 border-b border-gray-700">
-                            <th className="text-left py-1 pr-2">Column</th>
-                            <th className="text-left py-1">Type</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {table.columns.map(col => (
-                            <tr key={col.name} className="border-b border-gray-800 last:border-0">
-                              <td className="py-2 pr-2">
-                                <div className="flex items-center gap-1">
+                {/* Database Schema */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
+                    Database Schema
+                  </h3>
+                  <div className="space-y-3">
+                    {tableInfo.map(table => (
+                      <div
+                        key={table.name}
+                        className="bg-[#252526] border border-[#3e3e42] rounded-lg overflow-hidden"
+                      >
+                        <div className="bg-[#2d2d30] px-4 py-2 border-b border-[#3e3e42]">
+                          <h4 className="text-sm font-mono font-semibold text-yellow-400">
+                            {table.name}
+                          </h4>
+                        </div>
+                        <div className="p-3">
+                          <div className="space-y-1">
+                            {table.columns.map(col => (
+                              <div
+                                key={col.name}
+                                className="flex items-center justify-between text-xs py-1"
+                              >
+                                <div className="flex items-center gap-2">
                                   <span className="text-gray-300 font-mono">{col.name}</span>
                                   {col.pk && (
-                                    <span className="px-1 bg-yellow-900 text-yellow-300 rounded text-[10px] font-bold">
+                                    <span className="px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded text-[10px] font-semibold">
                                       PK
                                     </span>
                                   )}
                                 </div>
-                              </td>
-                              <td className="py-2 font-mono text-gray-400">{col.type}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                                <span className="text-gray-500 font-mono text-[11px]">
+                                  {col.type}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
-          </aside>
+          </div>
+
+          {/* Right Panel - Code Editor & Results */}
+          <div className="w-[50%] flex flex-col bg-[#1e1e1e]">
+            {/* SQL Editor */}
+            <div className="border-b border-[#3e3e42]">
+              <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#3e3e42]">
+                <span className="text-xs text-gray-400 font-medium">SQL Editor</span>
+                <button
+                  onClick={handleRunQuery}
+                  disabled={loading}
+                  className="px-4 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {loading ? 'Running...' : 'Run Query'}
+                </button>
+              </div>
+              <div className="h-64">
+                {editorError ? (
+                  <div className="flex flex-col items-center justify-center h-full p-4 bg-[#252526] border border-[#3e3e42] rounded">
+                    <p className="text-sm text-red-400 mb-2">Editor failed to load</p>
+                    <p className="text-xs text-gray-500 mb-4">{editorError}</p>
+                    <textarea
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                          e.preventDefault();
+                          handleRunQuery();
+                        }
+                      }}
+                      className="w-full h-full px-4 py-3 bg-[#1e1e1e] border border-[#3e3e42] rounded font-mono text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                      placeholder="-- Write your SQL query here"
+                    />
+                  </div>
+                ) : (
+                  <Editor
+                    height="100%"
+                    defaultLanguage="sql"
+                    theme="vs-dark"
+                    value={query}
+                    onChange={(value) => {
+                      setQuery(value || '');
+                    }}
+                    loading={
+                      <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                        Loading editor...
+                      </div>
+                    }
+                    beforeMount={(monaco) => {
+                      // Configure Monaco for Brave browser compatibility
+                      try {
+                        monaco.editor.defineTheme('vs-dark-brave', {
+                          base: 'vs-dark',
+                          inherit: true,
+                          rules: [],
+                          colors: {},
+                        });
+                      } catch (error) {
+                        console.warn('Monaco theme setup error:', error);
+                        setEditorError('Monaco editor initialization failed. Using fallback editor.');
+                      }
+                    }}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                      wordWrap: 'on',
+                      padding: { top: 12, bottom: 12 },
+                      readOnly: false,
+                      suggest: {
+                        showKeywords: false,
+                      },
+                      quickSuggestions: false,
+                      parameterHints: { enabled: false },
+                      acceptSuggestionOnCommitCharacter: false,
+                      acceptSuggestionOnEnter: 'off',
+                      snippetSuggestions: 'none',
+                      tabCompletion: 'off',
+                      wordBasedSuggestions: 'off',
+                      formatOnType: false,
+                      formatOnPaste: false,
+                      contextmenu: true,
+                      renderWhitespace: 'none',
+                      links: false,
+                    }}
+                    onMount={(editor: editor.IStandaloneCodeEditor, monaco: typeof import('monaco-editor')) => {
+                      try {
+                        editorRef.current = editor;
+                        
+                        // Force focus after a short delay (Brave needs this)
+                        setTimeout(() => {
+                          try {
+                            editor.focus();
+                            // Ensure editor is ready for input
+                            editor.updateOptions({ readOnly: false });
+                          } catch (error) {
+                            console.warn('Editor focus error:', error);
+                          }
+                        }, 100);
+                        
+                        // Run query shortcut
+                        editor.addCommand(
+                          monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+                          () => {
+                            handleRunQuery();
+                          }
+                        );
+                        
+                        // Override Ctrl+S to prevent browser save dialog
+                        editor.addCommand(
+                          monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+                          () => {
+                            // Prevent default save behavior
+                            return false;
+                          }
+                        );
+                        
+                        // Additional Brave compatibility: ensure editor container is accessible
+                        const container = editor.getContainerDomNode();
+                        if (container) {
+                          container.setAttribute('tabindex', '0');
+                          container.style.outline = 'none';
+                        }
+                      } catch (error) {
+                        console.error('Monaco editor mount error:', error);
+                        setEditorError('Failed to initialize editor. Using fallback editor.');
+                      }
+                    }}
+                    onValidate={() => {
+                      // Handle validation if needed
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Query Results */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="px-4 py-3 bg-[#252526] border-b border-[#3e3e42]">
+                <h3 className="text-xs text-gray-400 font-medium uppercase tracking-wide">
+                  Query Results
+                </h3>
+              </div>
+
+              <div className="p-4">
+                {result?.error ? (
+                  <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="text-red-400 text-lg">⚠</span>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-red-400 mb-1">Error</h4>
+                        <p className="text-xs text-red-300 leading-relaxed font-mono">
+                          {result.error}
+          </p>
         </div>
-      </main>
+                    </div>
+                  </div>
+                ) : result?.message ? (
+                  <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-4">
+                    <p className="text-xs text-green-300">✓ {result.message}</p>
+                  </div>
+                ) : result?.rows ? (
+                  <div>
+                    {result.rows.length === 0 ? (
+                      <p className="text-xs text-gray-500">No rows returned.</p>
+                    ) : (
+                      <>
+                        <p className="text-xs text-gray-500 mb-3">
+                          {result.rows.length} row(s) returned
+                          {result.rows.length === 100 && ' (limited to 100 rows)'}
+                        </p>
+                        <div className="border border-[#3e3e42] rounded-lg overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full text-xs">
+                              <thead className="bg-[#252526]">
+                                <tr>
+                                  {Object.keys(result.rows[0] || {}).map(key => (
+                                    <th
+                                      key={key}
+                                      className="px-4 py-2 text-left font-medium text-orange-400 uppercase tracking-wider border-b border-[#3e3e42]"
+                                    >
+                                      {key}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="bg-[#1e1e1e]">
+                                {result.rows.map((row, idx) => (
+                                  <tr
+                                    key={idx}
+                                    className="border-b border-[#3e3e42] last:border-0 hover:bg-[#252526] transition-colors"
+                                  >
+                                    {Object.values(row).map((value: unknown, cellIdx) => (
+                                      <td key={cellIdx} className="px-4 py-2 text-gray-300">
+                                        {value === null || value === undefined ? (
+                                          <span className="text-gray-600 italic">NULL</span>
+                                        ) : (
+                                          String(value)
+                                        )}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    Write your SQL query above and click &quot;Run Query&quot; or press Ctrl+Enter
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-[#252526] border-t border-[#3e3e42] px-4 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-4 text-xs text-gray-500">
+          <span>
+            Made by <span className="text-gray-400">Raghav</span> with <span className="text-red-500">❤️</span>
+          </span>
+          <span className="text-gray-700">•</span>
+          <a
+            href="https://github.com/RaghavOG"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            GitHub
+          </a>
+          <span className="text-gray-700">•</span>
+          <a
+            href="https://linkedin.com/in/singlaraghav"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            LinkedIn
+          </a>
+          <span className="text-gray-700">•</span>
+          <a
+            href="https://github.com/RaghavOG/sql-labs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Contribute
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }

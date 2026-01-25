@@ -1,14 +1,23 @@
 {
-  "name": "sql-lab",
-  "version": "0.1.0",
+  "name": "sql-labs",
+  "version": "2.0.0",
+  "description": "A modern, LeetCode-style SQL learning playground with 30+ interactive lessons",
+  "author": "Raghav Singla <https://github.com/RaghavOG>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/RaghavOG/sql-labs"
+  },
+  "keywords": ["sql", "learning", "education", "database", "tutorial", "playground"],
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "better-sqlite3": "^12.6.2",
     "next": "16.1.4",
     "react": "19.2.3",

@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SQL Labs
 
-## Getting Started
+> A modern, LeetCode-style SQL learning playground with 30+ interactive lessons
 
-First, run the development server:
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
+
+Learn SQL through hands-on practice with real-time query execution and instant feedback.
+
+## ✨ Features
+
+- 🎓 **30+ Structured Lessons** - From beginner to advanced
+- 💻 **Monaco Editor** - Professional code editor with SQL syntax highlighting
+- 🎯 **Task-Focused UI** - LeetCode-style problem-solving layout
+- ⚡ **Instant Feedback** - Run queries and see results immediately
+- 📊 **Real Database** - SQLite in-memory for authentic SQL experience
+- 🌙 **Dark Theme** - Optimized for long coding sessions
+- ✅ **Progress Tracking** - Your completed lessons are saved
+
+## 🚀 Quick Start
 
 ```bash
+# Clone the repository
+git clone https://github.com/RaghavOG/sql-labs.git
+cd sql-labs
+
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) and start learning!
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📚 Lesson Categories
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Querying Data** - SELECT, DISTINCT, LIMIT
+2. **Filtering Data** - WHERE, AND/OR, BETWEEN, IN, LIKE
+3. **Sorting Data** - ORDER BY, ASC/DESC
+4. **Aggregation** - COUNT, AVG, GROUP BY, HAVING
+5. **Joins** - INNER JOIN, LEFT JOIN, multi-table joins
+6. **Subqueries** - Nested queries, IN, EXISTS
+7. **Advanced** - UNION, complex queries
 
-## Learn More
+## 🎯 How It Works
 
-To learn more about Next.js, take a look at the following resources:
+Each lesson provides:
+- Clear task description
+- Sample database schema
+- SQL editor with syntax highlighting
+- Hint system (optional)
+- Instant query results
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Write your SQL, press Ctrl+Enter (or click Run), and see the results!
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Tech Stack
 
-## Deploy on Vercel
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript 5](https://www.typescriptlang.org/)
+- **Editor**: [Monaco Editor](https://microsoft.github.io/monaco-editor/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Database**: [SQLite](https://www.sqlite.org/) via [better-sqlite3](https://github.com/WiseLibs/better-sqlite3)
+- **Deployment**: [Vercel](https://vercel.com)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🌐 Deploy Your Own
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/RaghavOG/sql-labs)
+
+Or manually:
+
+```bash
+npm run build
+npm run start
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+Ways to contribute:
+- Add new lessons
+- Improve UI/UX
+- Fix bugs
+- Improve documentation
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Made with ❤️ by Raghav**
+
+- GitHub: [@RaghavOG](https://github.com/RaghavOG)
+- LinkedIn: [Raghav Singla](https://linkedin.com/in/singlaraghav)
+
+## 🙏 Acknowledgments
+
+- Inspired by [LeetCode](https://leetcode.com/)'s problem-solving interface
+- Built with modern web technologies
+- Community feedback and contributions
+
+---
+
+**Start learning SQL today!** 🚀
