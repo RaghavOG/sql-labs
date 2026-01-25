@@ -4,29 +4,12 @@ import Database from 'better-sqlite3';
 // Force Node.js runtime (required for better-sqlite3 on Vercel)
 export const runtime = 'nodejs';
 
-// Schema and seed data
-const SCHEMA = `
-CREATE TABLE users (
-  id INTEGER PRIMARY KEY,
-  name TEXT,
-  email TEXT,
-  age INTEGER,
-  country TEXT,
-  city TEXT
-);
-
-INSERT INTO users VALUES
-(1,'Alice','alice@test.com',25,'India','Delhi'),
-(2,'Bob','bob@test.com',30,'USA','New York'),
-(3,'Charlie','charlie@test.com',28,'UK','London');
-`;
-
-// Initialize a fresh in-memory database with schema and seed data
-function createFreshDatabase(): Database.Database {
+// Initialize a fresh in-memory database with provided schema
+function createFreshDatabase(schema: string): Database.Database {
   const db = new Database(':memory:');
   
   // Execute schema and seed data
-  const statements = SCHEMA.split(';').filter(stmt => stmt.trim());
+  const statements = schema.split(';').filter(stmt => stmt.trim());
   for (const statement of statements) {
     if (statement.trim()) {
       db.exec(statement.trim() + ';');
@@ -74,11 +57,18 @@ function validateQuery(query: string): { valid: boolean; error?: string } {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { query } = body;
+    const { query, schema } = body;
     
     if (!query || typeof query !== 'string') {
       return NextResponse.json(
         { error: 'Query is required and must be a string' },
+        { status: 400 }
+      );
+    }
+    
+    if (!schema || typeof schema !== 'string') {
+      return NextResponse.json(
+        { error: 'Schema is required and must be a string' },
         { status: 400 }
       );
     }
@@ -92,8 +82,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Create fresh database for this request
-    const db = createFreshDatabase();
+    // Create fresh database for this request with provided schema
+    const db = createFreshDatabase(schema);
     
     try {
       // Execute query
