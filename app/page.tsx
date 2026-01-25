@@ -3,10 +3,11 @@
 import { useState } from 'react';
 
 interface QueryResult {
-  rows?: any[];
+  rows?: Record<string, unknown>[];
   error?: string;
   message?: string;
 }
+
 
 export default function Home() {
   const [query, setQuery] = useState('SELECT * FROM users');
@@ -33,8 +34,9 @@ export default function Home() {
 
       const data = await response.json();
       setResult(data);
-    } catch (error: any) {
-      setResult({ error: error.message || 'Failed to execute query' });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to execute query';
+      setResult({ error: errorMessage });
     } finally {
       setLoading(false);
     }
@@ -140,7 +142,7 @@ export default function Home() {
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {result.rows.map((row, idx) => (
                           <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            {Object.values(row).map((value: any, cellIdx) => (
+                            {Object.values(row).map((value: unknown, cellIdx) => (
                               <td
                                 key={cellIdx}
                                 className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100"
@@ -161,7 +163,7 @@ export default function Home() {
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-sm py-4">
-                No results yet. Write a query and click "Run Query" to see results.
+                No results yet. Write a query and click &quot;Run Query&quot; to see results.
               </p>
             )}
           </div>
