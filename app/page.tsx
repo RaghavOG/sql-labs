@@ -90,8 +90,16 @@ export default function Home() {
     }
   }, [currentLessonId, currentLesson]);
 
-  const handleRunQuery = async () => {
-    if (!query.trim() || !currentLesson) {
+  const handleRunQuery = async (editorValue?: string) => {
+    // Use editor value if provided (from keyboard shortcut), otherwise use state
+    const queryToRun = editorValue !== undefined ? editorValue : query;
+    
+    // Always sync state when editor value is provided (from keyboard shortcut)
+    if (editorValue !== undefined) {
+      setQuery(editorValue);
+    }
+    
+    if (!queryToRun.trim() || !currentLesson) {
       setResult({ error: 'Query cannot be empty' });
       return;
     }
@@ -105,7 +113,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query, schema: currentLesson.schema }),
+        body: JSON.stringify({ query: queryToRun, schema: currentLesson.schema }),
       });
 
       const data = await response.json();
@@ -306,7 +314,7 @@ export default function Home() {
               <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#3e3e42]">
                 <span className="text-xs text-gray-400 font-medium">SQL Editor</span>
                 <button
-                  onClick={handleRunQuery}
+                  onClick={() => handleRunQuery()}
                   disabled={loading}
                   className="px-4 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
@@ -400,11 +408,19 @@ export default function Home() {
                           }
                         }, 100);
                         
-                        // Run query shortcut
+                        // Run query shortcut - get value directly from editor
                         editor.addCommand(
                           monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
                           () => {
-                            handleRunQuery();
+                            // Get the current value directly from editor (always fresh)
+                            const currentValue = editor.getValue();
+                            
+                            // Update React state to keep it in sync (for UI consistency)
+                            setQuery(currentValue);
+                            
+                            // Call handleRunQuery with the editor value
+                            // This bypasses any state sync issues
+                            handleRunQuery(currentValue);
                           }
                         );
                         
