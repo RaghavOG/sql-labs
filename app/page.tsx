@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { categories, getLessonById, getLessonsByCategory } from '@/lib/lessons';
+import Logo from '@/components/Logo';
 
 interface QueryResult {
   rows?: Record<string, unknown>[];
@@ -137,10 +138,8 @@ export default function Home() {
           {sidebarOpen && (
             <div className="h-full overflow-y-auto">
               <div className="p-4 border-b border-[#3e3e42]">
-                <h1 className="text-xl font-bold text-white">
-                  SQL <span className="text-orange-500">Labs</span>
-          </h1>
-                <p className="text-xs text-gray-400 mt-1">Interactive Learning</p>
+                <Logo />
+                <p className="text-xs text-gray-400 mt-2">Interactive Learning</p>
               </div>
 
               <div className="p-3 space-y-4">
