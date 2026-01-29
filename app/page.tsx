@@ -64,6 +64,8 @@ export default function Home() {
       const updated = new Set(prev);
       updated.add(lessonId);
       localStorage.setItem('completedLessons', JSON.stringify(Array.from(updated)));
+      // Temporary debug log to confirm state changes live
+      console.debug('markAsCompleted - updated set:', Array.from(updated));
       return updated;
     });
   };
@@ -121,6 +123,10 @@ export default function Home() {
     setLoading(true);
     setResult(null);
 
+    // Debug: log run invocation
+    // eslint-disable-next-line no-console
+    console.debug('handleRunQuery start', { editorValue, lessonId: currentLessonId });
+
     try {
       const response = await fetch('/api/sql/run', {
         method: 'POST',
@@ -143,6 +149,9 @@ export default function Home() {
         actualRowCount: data.rows?.length || 0,
       };
       
+      // Debug: log result and correctness
+      // eslint-disable-next-line no-console
+      console.debug('Query result', { enhancedResult, lessonId: currentLessonId });
       setResult(enhancedResult);
 
       // Mark as completed if correct
@@ -173,7 +182,14 @@ export default function Home() {
     if (!lesson || result.error) return false;
     
     // Normalize queries for comparison (remove whitespace, convert to uppercase)
-    const normalizeQuery = (q: string) => q.trim().replace(/\s+/g, ' ').toUpperCase();
+    const normalizeQuery = (q: string) =>
+      q
+        .trim()
+        // remove trailing semicolons
+        .replace(/;+\s*$/, '')
+        // collapse whitespace
+        .replace(/\s+/g, ' ')
+        .toUpperCase();
     const normalizedUserQuery = normalizeQuery(userQuery);
     const normalizedSolution = normalizeQuery(lesson.solution);
     
@@ -227,6 +243,22 @@ export default function Home() {
   };
 
   if (!currentLesson) return null;
+
+  // Global keyboard handler as a fallback to ensure Ctrl/Cmd+Enter always runs the query
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        const currentValue = editorRef.current ? editorRef.current.getValue() : query;
+        // eslint-disable-next-line no-console
+        console.debug('Global keyboard handler invoked', { currentValue, currentLessonId });
+        handleRunQuery(currentValue);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editorRef, query, currentLessonId]);
 
   return (
     <div className="flex flex-col h-screen bg-[#1e1e1e] text-gray-100 relative overflow-hidden">
@@ -676,6 +708,10 @@ export default function Home() {
                             // Update React state to keep it in sync (for UI consistency)
                             setQuery(currentValue);
                             
+                            // Debug: log keyboard-run invocation
+                            // eslint-disable-next-line no-console
+                            console.debug('Keyboard run invoked', { currentValue, currentLessonId });
+
                             // Call handleRunQuery with the editor value
                             // This bypasses any state sync issues
                             handleRunQuery(currentValue);
