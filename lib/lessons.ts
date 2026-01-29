@@ -8,6 +8,7 @@ export interface Lesson {
   solution: string;
   expectedColumns?: string[];
   expectedRowCount?: number;
+  expectedOutput?: Array<Record<string, unknown>>;
   explanation?: string;
   schema: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
@@ -83,6 +84,20 @@ export const lessons: Lesson[] = [
     hint: 'Use SELECT * to get all columns. The asterisk (*) is a wildcard that means "all columns".',
     task: 'Retrieve all columns from the users table to see the complete customer information.',
     solution: 'SELECT * FROM users',
+    expectedRowCount: 10,
+    expectedOutput: [
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 5, name: 'Eve Wilson', email: 'eve@email.com', age: 26, country: 'Australia', city: 'Sydney' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+      { id: 7, name: 'Grace Lee', email: 'grace@email.com', age: 29, country: 'South Korea', city: 'Seoul' },
+      { id: 8, name: 'Henry Davis', email: 'henry@email.com', age: 45, country: 'UK', city: 'Manchester' },
+      { id: 9, name: 'Ivy Chen', email: 'ivy@email.com', age: 33, country: 'China', city: 'Beijing' },
+      { id: 10, name: 'Jack Robinson', email: 'jack@email.com', age: 27, country: 'Canada', city: 'Vancouver' },
+    ],
+    explanation: 'SELECT * retrieves every column from a table. The asterisk (*) is a wildcard that means "all columns".',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -117,6 +132,18 @@ export const lessons: Lesson[] = [
     solution: 'SELECT name, email FROM users',
     expectedColumns: ['name', 'email'],
     expectedRowCount: 10,
+    expectedOutput: [
+      { name: 'Alice Johnson', email: 'alice@email.com' },
+      { name: 'Bob Smith', email: 'bob@email.com' },
+      { name: 'Charlie Brown', email: 'charlie@email.com' },
+      { name: 'Diana Prince', email: 'diana@email.com' },
+      { name: 'Eve Wilson', email: 'eve@email.com' },
+      { name: 'Frank Miller', email: 'frank@email.com' },
+      { name: 'Grace Lee', email: 'grace@email.com' },
+      { name: 'Henry Davis', email: 'henry@email.com' },
+      { name: 'Ivy Chen', email: 'ivy@email.com' },
+      { name: 'Jack Robinson', email: 'jack@email.com' },
+    ],
     explanation: 'SELECT chooses which columns appear in your result. You can list specific columns instead of using * to get only what you need.',
     difficulty: 'beginner',
     schema: `
@@ -150,6 +177,16 @@ export const lessons: Lesson[] = [
     hint: 'Use SELECT DISTINCT column FROM table to get unique values',
     task: 'Get a list of all unique countries from the users table.',
     solution: 'SELECT DISTINCT country FROM users',
+    expectedRowCount: 7,
+    expectedOutput: [
+      { country: 'USA' },
+      { country: 'UK' },
+      { country: 'Canada' },
+      { country: 'Australia' },
+      { country: 'South Korea' },
+      { country: 'China' },
+    ],
+    explanation: 'DISTINCT removes duplicate rows from your result. Each unique country appears only once, even if multiple users are from that country.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -182,6 +219,15 @@ export const lessons: Lesson[] = [
     hint: 'Add LIMIT n at the end of your query to get only n rows',
     task: 'Retrieve the first 5 users from the users table.',
     solution: 'SELECT * FROM users LIMIT 5',
+    expectedRowCount: 5,
+    expectedOutput: [
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 5, name: 'Eve Wilson', email: 'eve@email.com', age: 26, country: 'Australia', city: 'Sydney' },
+    ],
+    explanation: 'LIMIT restricts how many rows are returned. It stops after the specified number, regardless of how many rows match your query.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -217,6 +263,11 @@ export const lessons: Lesson[] = [
     task: 'Find all users from the USA.',
     solution: "SELECT * FROM users WHERE country = 'USA'",
     expectedRowCount: 3,
+    expectedOutput: [
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+    ],
     explanation: 'WHERE filters rows before SELECT chooses columns. Think of WHERE as a bouncer - only rows meeting the condition get through.',
     difficulty: 'beginner',
     schema: `
@@ -250,6 +301,12 @@ export const lessons: Lesson[] = [
     hint: 'Use AND to combine conditions: WHERE condition1 AND condition2',
     task: 'Find all users from USA who are older than 30.',
     solution: "SELECT * FROM users WHERE country = 'USA' AND age > 30",
+    expectedRowCount: 2,
+    expectedOutput: [
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+    ],
+    explanation: 'AND requires both conditions to be true. A row must match the first condition AND the second condition to be included.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -282,6 +339,14 @@ export const lessons: Lesson[] = [
     hint: 'Use OR when any condition can be true: WHERE condition1 OR condition2',
     task: 'Find all users from either UK or Canada.',
     solution: "SELECT * FROM users WHERE country = 'UK' OR country = 'Canada'",
+    expectedRowCount: 4,
+    expectedOutput: [
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 8, name: 'Henry Davis', email: 'henry@email.com', age: 45, country: 'UK', city: 'Manchester' },
+      { id: 10, name: 'Jack Robinson', email: 'jack@email.com', age: 27, country: 'Canada', city: 'Vancouver' },
+    ],
+    explanation: 'OR matches rows where at least one condition is true. A row is included if it matches the first condition OR the second condition.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -314,6 +379,14 @@ export const lessons: Lesson[] = [
     hint: 'BETWEEN checks if a value is in a range: WHERE column BETWEEN value1 AND value2',
     task: 'Find all users whose age is between 30 and 40 (inclusive).',
     solution: 'SELECT * FROM users WHERE age BETWEEN 30 AND 40',
+    expectedRowCount: 4,
+    expectedOutput: [
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+      { id: 9, name: 'Ivy Chen', email: 'ivy@email.com', age: 33, country: 'China', city: 'Beijing' },
+    ],
+    explanation: 'BETWEEN checks if a value falls within a range, including both endpoints. It\'s equivalent to column >= value1 AND column <= value2.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -346,6 +419,17 @@ export const lessons: Lesson[] = [
     hint: 'IN checks if a value matches any in a list: WHERE column IN (value1, value2, ...)',
     task: 'Find all users from USA, UK, or Canada.',
     solution: "SELECT * FROM users WHERE country IN ('USA', 'UK', 'Canada')",
+    expectedRowCount: 7,
+    expectedOutput: [
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+      { id: 8, name: 'Henry Davis', email: 'henry@email.com', age: 45, country: 'UK', city: 'Manchester' },
+      { id: 10, name: 'Jack Robinson', email: 'jack@email.com', age: 27, country: 'Canada', city: 'Vancouver' },
+    ],
+    explanation: 'IN checks if a value matches any value in a list. It\'s a shorthand for multiple OR conditions.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -378,6 +462,11 @@ export const lessons: Lesson[] = [
     hint: 'LIKE matches patterns. Use % for any characters, _ for single character',
     task: 'Find all users whose name starts with "A".',
     solution: "SELECT * FROM users WHERE name LIKE 'A%'",
+    expectedRowCount: 1,
+    expectedOutput: [
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+    ],
+    explanation: 'LIKE matches patterns in text. The % wildcard means "any characters" - so A% matches anything starting with A.',
     difficulty: 'intermediate',
     schema: `
       CREATE TABLE users (
@@ -412,6 +501,20 @@ export const lessons: Lesson[] = [
     hint: 'ORDER BY column sorts results. ASC is ascending (default)',
     task: 'Get all users sorted by age from youngest to oldest.',
     solution: 'SELECT * FROM users ORDER BY age ASC',
+    expectedRowCount: 10,
+    expectedOutput: [
+      { id: 5, name: 'Eve Wilson', email: 'eve@email.com', age: 26, country: 'Australia', city: 'Sydney' },
+      { id: 10, name: 'Jack Robinson', email: 'jack@email.com', age: 27, country: 'Canada', city: 'Vancouver' },
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+      { id: 7, name: 'Grace Lee', email: 'grace@email.com', age: 29, country: 'South Korea', city: 'Seoul' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 9, name: 'Ivy Chen', email: 'ivy@email.com', age: 33, country: 'China', city: 'Beijing' },
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 8, name: 'Henry Davis', email: 'henry@email.com', age: 45, country: 'UK', city: 'Manchester' },
+    ],
+    explanation: 'ORDER BY sorts your results. ASC means ascending (smallest to largest). The default sort order is ASC if you don\'t specify.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -444,6 +547,20 @@ export const lessons: Lesson[] = [
     hint: 'Use DESC for descending order: ORDER BY column DESC',
     task: 'Get all users sorted by age from oldest to youngest.',
     solution: 'SELECT * FROM users ORDER BY age DESC',
+    expectedRowCount: 10,
+    expectedOutput: [
+      { id: 8, name: 'Henry Davis', email: 'henry@email.com', age: 45, country: 'UK', city: 'Manchester' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 9, name: 'Ivy Chen', email: 'ivy@email.com', age: 33, country: 'China', city: 'Beijing' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 7, name: 'Grace Lee', email: 'grace@email.com', age: 29, country: 'South Korea', city: 'Seoul' },
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+      { id: 10, name: 'Jack Robinson', email: 'jack@email.com', age: 27, country: 'Canada', city: 'Vancouver' },
+      { id: 5, name: 'Eve Wilson', email: 'eve@email.com', age: 26, country: 'Australia', city: 'Sydney' },
+    ],
+    explanation: 'DESC means descending (largest to smallest). ORDER BY sorts rows after filtering and selecting.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -476,6 +593,20 @@ export const lessons: Lesson[] = [
     hint: 'You can sort by multiple columns: ORDER BY column1, column2',
     task: 'Sort users by country (ascending), then by age (descending).',
     solution: 'SELECT * FROM users ORDER BY country ASC, age DESC',
+    expectedRowCount: 10,
+    expectedOutput: [
+      { id: 5, name: 'Eve Wilson', email: 'eve@email.com', age: 26, country: 'Australia', city: 'Sydney' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 10, name: 'Jack Robinson', email: 'jack@email.com', age: 27, country: 'Canada', city: 'Vancouver' },
+      { id: 9, name: 'Ivy Chen', email: 'ivy@email.com', age: 33, country: 'China', city: 'Beijing' },
+      { id: 7, name: 'Grace Lee', email: 'grace@email.com', age: 29, country: 'South Korea', city: 'Seoul' },
+      { id: 8, name: 'Henry Davis', email: 'henry@email.com', age: 45, country: 'UK', city: 'Manchester' },
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+      { id: 4, name: 'Diana Prince', email: 'diana@email.com', age: 31, country: 'USA', city: 'Los Angeles' },
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com', age: 28, country: 'USA', city: 'New York' },
+    ],
+    explanation: 'You can sort by multiple columns. The first column is the primary sort, and the second breaks ties when values are equal.',
     difficulty: 'intermediate',
     schema: `
       CREATE TABLE users (
@@ -510,6 +641,11 @@ export const lessons: Lesson[] = [
     hint: 'COUNT(*) counts all rows, COUNT(column) counts non-NULL values',
     task: 'Count the total number of users.',
     solution: 'SELECT COUNT(*) as total_users FROM users',
+    expectedRowCount: 1,
+    expectedOutput: [
+      { total_users: 10 },
+    ],
+    explanation: 'COUNT(*) counts all rows, returning a single number. Aggregate functions like COUNT collapse multiple rows into one result.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -542,6 +678,11 @@ export const lessons: Lesson[] = [
     hint: 'AVG(column) calculates the average of numeric values',
     task: 'Calculate the average age of all users.',
     solution: 'SELECT AVG(age) as average_age FROM users',
+    expectedRowCount: 1,
+    expectedOutput: [
+      { average_age: 33.5 },
+    ],
+    explanation: 'AVG calculates the average of numeric values. Like COUNT, it returns a single row with the aggregated result.',
     difficulty: 'beginner',
     schema: `
       CREATE TABLE users (
@@ -574,6 +715,16 @@ export const lessons: Lesson[] = [
     hint: 'GROUP BY collapses rows with the same value. Combine with COUNT, SUM, AVG, etc.',
     task: 'Count how many users are in each country.',
     solution: 'SELECT country, COUNT(*) as user_count FROM users GROUP BY country',
+    expectedRowCount: 7,
+    expectedOutput: [
+      { country: 'USA', user_count: 3 },
+      { country: 'UK', user_count: 2 },
+      { country: 'Canada', user_count: 2 },
+      { country: 'Australia', user_count: 1 },
+      { country: 'South Korea', user_count: 1 },
+      { country: 'China', user_count: 1 },
+    ],
+    explanation: 'GROUP BY collapses rows with the same value into groups. Each group becomes one row in the result, and you can aggregate within each group.',
     difficulty: 'intermediate',
     schema: `
       CREATE TABLE users (
@@ -606,6 +757,13 @@ export const lessons: Lesson[] = [
     hint: 'HAVING filters after GROUP BY. WHERE filters before grouping.',
     task: 'Find countries that have more than 1 user.',
     solution: 'SELECT country, COUNT(*) as user_count FROM users GROUP BY country HAVING COUNT(*) > 1',
+    expectedRowCount: 3,
+    expectedOutput: [
+      { country: 'USA', user_count: 3 },
+      { country: 'UK', user_count: 2 },
+      { country: 'Canada', user_count: 2 },
+    ],
+    explanation: 'HAVING filters groups after GROUP BY, while WHERE filters rows before grouping. Use HAVING when filtering on aggregate results.',
     difficulty: 'intermediate',
     schema: `
       CREATE TABLE users (
@@ -640,6 +798,14 @@ export const lessons: Lesson[] = [
     hint: 'INNER JOIN returns rows that have matches in both tables',
     task: 'List all orders with customer names.',
     solution: 'SELECT customers.name, orders.order_id, orders.amount FROM customers INNER JOIN orders ON customers.id = orders.customer_id',
+    expectedRowCount: 4,
+    expectedOutput: [
+      { name: 'Alice Johnson', order_id: 101, amount: 99.99 },
+      { name: 'Alice Johnson', order_id: 102, amount: 149.50 },
+      { name: 'Bob Smith', order_id: 103, amount: 75.00 },
+      { name: 'Charlie Brown', order_id: 104, amount: 200.00 },
+    ],
+    explanation: 'INNER JOIN combines rows from two tables where the join condition matches. Only rows with matches in both tables appear in the result.',
     difficulty: 'intermediate',
     schema: `
       CREATE TABLE customers (
@@ -676,6 +842,15 @@ export const lessons: Lesson[] = [
     hint: 'LEFT JOIN returns all rows from left table, even without matches',
     task: 'List all customers and their orders (include customers with no orders).',
     solution: 'SELECT customers.name, orders.order_id, orders.amount FROM customers LEFT JOIN orders ON customers.id = orders.customer_id',
+    expectedRowCount: 5,
+    expectedOutput: [
+      { name: 'Alice Johnson', order_id: 101, amount: 99.99 },
+      { name: 'Alice Johnson', order_id: 102, amount: 149.50 },
+      { name: 'Bob Smith', order_id: 103, amount: 75.00 },
+      { name: 'Charlie Brown', order_id: 104, amount: 200.00 },
+      { name: 'Diana Prince', order_id: null, amount: null },
+    ],
+    explanation: 'LEFT JOIN returns all rows from the left table, even if there\'s no match in the right table. Missing values appear as NULL.',
     difficulty: 'intermediate',
     schema: `
       CREATE TABLE customers (
@@ -712,6 +887,14 @@ export const lessons: Lesson[] = [
     hint: 'You can chain multiple JOINs to combine many tables',
     task: 'List all orders with customer names and product details.',
     solution: 'SELECT customers.name, orders.order_id, products.product_name, products.price FROM orders INNER JOIN customers ON orders.customer_id = customers.id INNER JOIN products ON orders.product_id = products.id',
+    expectedRowCount: 4,
+    expectedOutput: [
+      { name: 'Alice Johnson', order_id: 101, product_name: 'Laptop', price: 999.99 },
+      { name: 'Alice Johnson', order_id: 102, product_name: 'Mouse', price: 29.99 },
+      { name: 'Bob Smith', order_id: 103, product_name: 'Keyboard', price: 79.99 },
+      { name: 'Charlie Brown', order_id: 104, product_name: 'Monitor', price: 299.99 },
+    ],
+    explanation: 'You can chain multiple JOINs to combine many tables. Each JOIN connects one more table to your result set.',
     difficulty: 'advanced',
     schema: `
       CREATE TABLE customers (
@@ -762,6 +945,15 @@ export const lessons: Lesson[] = [
     hint: 'A subquery is a query inside another query, wrapped in parentheses',
     task: 'Find all users who are older than the average age.',
     solution: 'SELECT * FROM users WHERE age > (SELECT AVG(age) FROM users)',
+    expectedRowCount: 5,
+    expectedOutput: [
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com', age: 35, country: 'UK', city: 'London' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com', age: 42, country: 'Canada', city: 'Toronto' },
+      { id: 6, name: 'Frank Miller', email: 'frank@email.com', age: 39, country: 'USA', city: 'Chicago' },
+      { id: 8, name: 'Henry Davis', email: 'henry@email.com', age: 45, country: 'UK', city: 'Manchester' },
+      { id: 9, name: 'Ivy Chen', email: 'ivy@email.com', age: 33, country: 'China', city: 'Beijing' },
+    ],
+    explanation: 'A subquery runs first and its result is used in the outer query. Here, the subquery calculates the average, then the outer query filters by it.',
     difficulty: 'advanced',
     schema: `
       CREATE TABLE users (
@@ -794,6 +986,13 @@ export const lessons: Lesson[] = [
     hint: 'Use IN with a subquery to match against multiple values',
     task: 'Find customers who have placed orders.',
     solution: 'SELECT * FROM customers WHERE id IN (SELECT customer_id FROM orders)',
+    expectedRowCount: 3,
+    expectedOutput: [
+      { id: 1, name: 'Alice Johnson', email: 'alice@email.com' },
+      { id: 2, name: 'Bob Smith', email: 'bob@email.com' },
+      { id: 3, name: 'Charlie Brown', email: 'charlie@email.com' },
+    ],
+    explanation: 'Using IN with a subquery checks if a value exists in the subquery results. This is useful for finding related records across tables.',
     difficulty: 'advanced',
     schema: `
       CREATE TABLE customers (
@@ -832,6 +1031,15 @@ export const lessons: Lesson[] = [
     hint: 'UNION combines results and removes duplicates. UNION ALL keeps duplicates.',
     task: 'Get a list of all cities from both users and offices tables.',
     solution: 'SELECT city FROM users UNION SELECT city FROM offices',
+    expectedRowCount: 5,
+    expectedOutput: [
+      { city: 'New York' },
+      { city: 'London' },
+      { city: 'Toronto' },
+      { city: 'Paris' },
+      { city: 'Tokyo' },
+    ],
+    explanation: 'UNION combines results from multiple queries and removes duplicates. Both queries must return the same number of columns.',
     difficulty: 'advanced',
     schema: `
       CREATE TABLE users (

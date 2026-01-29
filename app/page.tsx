@@ -34,6 +34,8 @@ export default function Home() {
   const [editorError, setEditorError] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [showFullExpected, setShowFullExpected] = useState(false);
+  const [showDiffExpanded, setShowDiffExpanded] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const { width, height } = useWindowSize();
 
@@ -58,10 +60,12 @@ export default function Home() {
 
   // Save completed lessons to localStorage
   const markAsCompleted = (lessonId: string) => {
-    const updated = new Set(completedLessons);
-    updated.add(lessonId);
-    setCompletedLessons(updated);
-    localStorage.setItem('completedLessons', JSON.stringify(Array.from(updated)));
+    setCompletedLessons(prev => {
+      const updated = new Set(prev);
+      updated.add(lessonId);
+      localStorage.setItem('completedLessons', JSON.stringify(Array.from(updated)));
+      return updated;
+    });
   };
 
   // Extract table info from schema and reset state when lesson changes
@@ -173,18 +177,53 @@ export default function Home() {
     const normalizedUserQuery = normalizeQuery(userQuery);
     const normalizedSolution = normalizeQuery(lesson.solution);
     
-    // Check if query matches solution
+    // Check if query matches solution exactly
     if (normalizedUserQuery === normalizedSolution) {
       return true;
     }
     
-    // Check expected row count if available
-    if (lesson.expectedRowCount !== undefined && result.rows) {
+    // If expected row count is defined, it must match exactly
+    if (lesson.expectedRowCount !== undefined) {
+      if (!result.rows) return false;
       return result.rows.length === lesson.expectedRowCount;
     }
     
-    // If no specific validation, consider it correct if no error
-    return !result.error && result.rows !== undefined;
+    // If no expected row count, only accept exact solution match
+    return false;
+  };
+
+  // Compute simple row-level differences between expected and actual
+  const computeRowDiff = (expected: Array<Record<string, unknown>> = [], actual: Array<Record<string, unknown>> = []) => {
+    // Helper to produce stable JSON for a row (sorted keys)
+    const stableStringify = (obj: Record<string, unknown>) => {
+      const keys = Object.keys(obj).sort();
+      const ordered: Record<string, unknown> = {};
+      for (const k of keys) ordered[k] = obj[k];
+      try {
+        return JSON.stringify(ordered);
+      } catch {
+        return String(obj);
+      }
+    };
+
+    const expectedSet = new Set(expected.map(stableStringify));
+    const actualSet = new Set(actual.map(stableStringify));
+
+    const missing: Record<string, unknown>[] = [];
+    const extra: Record<string, unknown>[] = [];
+
+    for (const s of expectedSet) {
+      if (!actualSet.has(s)) {
+        try { missing.push(JSON.parse(s)); } catch { missing.push({ raw: s }); }
+      }
+    }
+    for (const s of actualSet) {
+      if (!expectedSet.has(s)) {
+        try { extra.push(JSON.parse(s)); } catch { extra.push({ raw: s }); }
+      }
+    }
+
+    return { missing, extra };
   };
 
   if (!currentLesson) return null;
@@ -220,7 +259,12 @@ export default function Home() {
           />
           {/* Celebration Modal */}
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-            <div className="bg-[#252526] border-2 border-orange-500 rounded-lg p-8 shadow-2xl pointer-events-auto animate-fade-in animate-scale-in">
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="bg-[#252526] border-2 border-orange-500 rounded-lg p-8 shadow-2xl pointer-events-auto animate-fade-in animate-scale-in max-w-md mx-4"
+              onClick={() => { setShowConfetti(false); }}
+            >
               <div className="text-center">
                 <div className="text-6xl mb-4 animate-bounce">🎉</div>
                 <h2 className="text-2xl font-bold text-white mb-2">Excellent!</h2>
@@ -241,7 +285,7 @@ export default function Home() {
         <aside
           className={`${
             sidebarOpen ? 'w-64' : 'w-0'
-          } transition-all duration-300 bg-[#252526] border-r border-[#3e3e42] overflow-hidden flex-shrink-0`}
+          } transition-all duration-300 bg-[#252526] border-r border-[#3e3e42] overflow-hidden shrink-0`}
         >
           {sidebarOpen && (
             <div className="h-full overflow-y-auto">
@@ -293,6 +337,57 @@ export default function Home() {
               </div>
             </div>
           )}
+                        {/* Row-level diff preview (first 3 mismatches) */}
+                        {currentLesson.expectedOutput && result?.rows && (function renderDiff() {
+                          const diff = computeRowDiff(currentLesson.expectedOutput, result?.rows || []);
+                          const missing = diff.missing || [];
+                          const extra = diff.extra || [];
+                          if (missing.length === 0 && extra.length === 0) return null;
+                          return (
+                            <div className="bg-[#1b1b1b] border border-[#3e3e42] rounded-lg p-3 mb-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs text-yellow-300 font-medium">Row differences</p>
+                                <button
+                                  onClick={() => setShowDiffExpanded(s => !s)}
+                                  className="text-xs text-blue-400 hover:text-blue-300"
+                                >
+                                  {showDiffExpanded ? 'Hide details' : 'Show details'}
+                                </button>
+                              </div>
+                              {!showDiffExpanded ? (
+                                <div className="flex gap-4">
+                                  {missing.length > 0 && (
+                                    <div className="flex-1">
+                                      <p className="text-xs text-yellow-300 font-medium mb-1">Missing Rows (preview)</p>
+                                      <pre className="text-xs text-gray-300 bg-[#151515] p-2 rounded overflow-auto">{missing.slice(0,3).map(r => JSON.stringify(r)).join('\\n')}</pre>
+                                    </div>
+                                  )}
+                                  {extra.length > 0 && (
+                                    <div className="flex-1">
+                                      <p className="text-xs text-yellow-300 font-medium mb-1">Extra Rows (preview)</p>
+                                      <pre className="text-xs text-gray-300 bg-[#151515] p-2 rounded overflow-auto">{extra.slice(0,3).map(r => JSON.stringify(r)).join('\\n')}</pre>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div>
+                                  {missing.length > 0 && (
+                                    <div className="mb-2">
+                                      <p className="text-xs text-yellow-300 font-medium mb-1">Missing Rows</p>
+                                      <pre className="text-xs text-gray-300 bg-[#151515] p-2 rounded overflow-auto">{missing.map(r => JSON.stringify(r)).join('\\n\\n')}</pre>
+                                    </div>
+                                  )}
+                                  {extra.length > 0 && (
+                                    <div>
+                                      <p className="text-xs text-yellow-300 font-medium mb-1">Extra Rows</p>
+                                      <pre className="text-xs text-gray-300 bg-[#151515] p-2 rounded overflow-auto">{extra.map(r => JSON.stringify(r)).join('\\n\\n')}</pre>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
         </aside>
 
         {/* Toggle Sidebar Button */}
@@ -361,6 +456,64 @@ export default function Home() {
                   )}
                 </div>
 
+                {/* Expected Output */}
+                        {currentLesson.expectedOutput && currentLesson.expectedOutput.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
+                      Expected Output
+                    </h3>
+                            <div className="border border-[#3e3e42] rounded-lg overflow-hidden bg-[#252526]">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-xs">
+                          <thead className="bg-[#2d2d30]">
+                            <tr>
+                                      {Object.keys((showFullExpected ? currentLesson.expectedOutput[0] : currentLesson.expectedOutput[0]) || {}).map(key => (
+                                <th
+                                  key={key}
+                                  className="px-3 py-2 text-left font-medium text-orange-400 uppercase tracking-wider border-b border-[#3e3e42]"
+                                >
+                                  {key}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-[#252526]">
+                                    {(showFullExpected ? currentLesson.expectedOutput : currentLesson.expectedOutput.slice(0,5)).map((row, idx) => (
+                              <tr
+                                key={idx}
+                                className="border-b border-[#3e3e42] last:border-0"
+                              >
+                                {Object.values(row).map((value: unknown, cellIdx) => (
+                                  <td key={cellIdx} className="px-3 py-2 text-gray-300">
+                                    {value === null || value === undefined ? (
+                                      <span className="text-gray-600 italic">NULL</span>
+                                    ) : (
+                                      String(value)
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-xs text-gray-500">
+                        {currentLesson.expectedRowCount} row(s) expected
+                      </p>
+                      {currentLesson.expectedOutput.length > 5 && (
+                        <button
+                          onClick={() => setShowFullExpected(s => !s)}
+                          className="text-xs text-blue-400 hover:text-blue-300"
+                        >
+                          {showFullExpected ? 'Hide full output' : 'Show full output'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Database Schema */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide">
@@ -412,7 +565,12 @@ export default function Home() {
             {/* SQL Editor */}
             <div className="border-b border-[#3e3e42]">
               <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-[#3e3e42]">
-                <span className="text-xs text-gray-400 font-medium">SQL Editor</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400 font-medium">SQL Editor</span>
+                  <span className="text-xs text-gray-500">•</span>
+                  <span className="text-xs text-gray-400">Editor:</span>
+                  <span className="text-xs font-medium text-green-400">{/* editor health */}{editorRef.current ? 'Monaco' : 'Fallback'}</span>
+                </div>
                 <button
                   onClick={() => handleRunQuery()}
                   disabled={loading}
@@ -645,9 +803,19 @@ export default function Home() {
                         {/* Show expected vs actual if wrong */}
                         {result.expectedRowCount !== undefined && result.actualRowCount !== undefined && result.actualRowCount !== result.expectedRowCount && (
                           <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3 mb-3">
-                            <p className="text-xs text-yellow-300 font-medium">
-                              Expected {result.expectedRowCount} row(s), got {result.actualRowCount} row(s)
-                            </p>
+                            <div className="flex items-start gap-2">
+                              <span className="text-yellow-400">⚠</span>
+                              <div className="flex-1">
+                                <p className="text-xs text-yellow-300 font-medium mb-1">
+                                  Row count mismatch
+                                </p>
+                                <p className="text-xs text-yellow-400">
+                                  Expected {result.expectedRowCount} row(s), got {result.actualRowCount} row(s)
+                                  {result.actualRowCount < result.expectedRowCount && ' (too few rows)'}
+                                  {result.actualRowCount > result.expectedRowCount && ' (too many rows)'}
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         )}
                         <p className="text-xs text-gray-500 mb-3">

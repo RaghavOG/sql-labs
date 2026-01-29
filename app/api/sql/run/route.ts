@@ -95,14 +95,21 @@ export async function POST(request: NextRequest) {
       
       if (isSelect) {
         const rows = statement.all();
-        
+
         // Limit results to 100 rows
         const limitedRows = rows.slice(0, 100);
-        
+
+        // Derive columns (empty array if no rows)
+        const columns = limitedRows.length > 0 ? Object.keys(limitedRows[0]) : [];
+
         // Close database
         db.close();
-        
-        return NextResponse.json({ rows: limitedRows });
+
+        return NextResponse.json({
+          rows: limitedRows,
+          rowCount: limitedRows.length,
+          columns,
+        });
       } else {
         // For non-SELECT queries (INSERT, UPDATE, DELETE, etc.)
         const result = statement.run();
@@ -110,6 +117,7 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json({
           rows: [],
+          rowCount: result.changes || 0,
           message: `Query executed successfully. ${result.changes || 0} row(s) affected.`
         });
       }
