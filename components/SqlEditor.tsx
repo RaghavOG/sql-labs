@@ -101,7 +101,6 @@ export default function SqlEditor({ query, setQuery, onRun, error, loading, onMo
                             lineHeight: 22,
                             // Clean appearance
                             guides: { indentation: false },
-                            foldStyle: undefined,
                             matchBrackets: 'always',
                             renderWhitespace: 'none',
 
