@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         const limitedRows = rows.slice(0, 100);
 
         // Derive columns (empty array if no rows)
-        const columns = limitedRows.length > 0 ? Object.keys(limitedRows[0]) : [];
+        const columns = limitedRows.length > 0 ? Object.keys(limitedRows[0] as object) : [];
 
         // Close database
         db.close();
